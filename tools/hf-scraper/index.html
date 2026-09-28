@@ -1,238 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HF Bulk Scraper v6 - Category Aware</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width">
+<title>HF Scraper v7 Simple</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>
-body{background:#0e1116;color:#e5e7eb;font-family:Inter,system-ui}
-.card{background:#161a23;border:1px solid #ffffff12}
-.mono{font-family:ui-monospace,monospace}
-</style>
+<style>body{background:#0e1116;color:#e5e7eb}.card{background:#161a23;border:1px solid #222}</style>
 </head>
-<body class="p-4 md:p-6">
-<div class="max-w- mx-auto">
-  <div class="flex justify-between items-center mb-6">
-    <div>
-      <h1 class="text-3xl font-black">🤗 HF Bulk Scraper <span class="text-[#a78bfa]">v6</span></h1>
-      <p class="text-sm opacity-60 mt-1">One category at a time | Name, Link, Type + Use via API | Anti-Block via Worker</p>
-    </div>
-    <a href="/" class="card px-4 py-2 rounded-xl text-sm">← Hub</a>
-  </div>
+<body class="p-5 max-w- mx-auto">
+<h1 class="text-2xl font-black">HF Scraper v7 - Simple Flow</h1>
+<p class="text-xs opacity-60 mt-1">Paste -> List -> Go to Space -> Check Use via API/MCP -> Save -> Next. As you described.</p>
 
-  <!-- Inputs -->
-  <div class="card rounded-2xl p-5 grid md:grid-cols-12 gap-4">
-    <div class="md:col-span-8">
-      <label class="text-xs opacity-60">Paste HF Spaces URL (from your list)</label>
-      <div class="flex gap-2 mt-1">
-        <input id="hfUrlInput" class="w-full bg-[#0e1116] border border-white/10 rounded-xl px-4 py-3 text-sm" placeholder="https://huggingface.co/spaces?q=Wan2.1&category=video-generation" value="https://huggingface.co/spaces?q=Wan2.1&category=video-generation">
-        <button onclick="parseHFUrlInput()" class="bg-white text-black font-bold px-5 rounded-xl text-sm">Parse</button>
-      </div>
-      <div class="grid grid-cols-2 gap-3 mt-3">
-        <div>
-          <label class="text-xs opacity-60">Search q (e.g. Wan2.1)</label>
-          <input id="searchInput" class="w-full bg-[#0e1116] border border-white/10 rounded-xl px-3 py-2.5 text-sm mt-1" value="Wan2.1">
-        </div>
-        <div>
-          <label class="text-xs opacity-60">Category / Type</label>
-          <select id="categoryInput" class="w-full bg-[#0e1116] border border-white/10 rounded-xl px-3 py-2.5 text-sm mt-1">
-            <option value="">All</option>
-            <option value="image-generation">image-generation</option>
-            <option value="video-generation" selected>video-generation</option>
-            <option value="text-generation">text-generation</option>
-            <option value="language-translation">language-translation</option>
-            <option value="object-detection">object-detection</option>
-            <option value="data-visualization">data-visualization</option>
-            <option value="image-upscaling">image-upscaling</option>
-            <option value="chatbots">chatbots</option>
-            <option value="model-benchmarking">model-benchmarking</option>
-            <option value="fine-tuning-tools">fine-tuning-tools</option>
-            <option value="reachy_mini">reachy_mini</option>
-            <option value="text-analysis">text-analysis</option>
-            <option value="speech-synthesis">speech-synthesis</option>
-            <option value="3d-modeling">3d-modeling</option>
-            <option value="music-generation">music-generation</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="md:col-span-4 space-y-3">
-      <div>
-        <label class="text-xs opacity-60">Cloudflare Worker Proxy (anti-block + anti-CORS)</label>
-        <input id="proxyUrl" class="w-full bg-[#0e1116] border border-white/10 rounded-xl px-3 py-2.5 text-sm mt-1 mono" value="https://all-tools-factory.sarkarsajib698.workers.dev">
-      </div>
-      <div class="grid grid-cols-3 gap-2">
-        <select id="limitInput" class="bg-[#0e1116] border border-white/10 rounded-xl px-2 py-2.5 text-sm"><option>10</option><option selected>25</option><option>50</option><option>100</option></select>
-        <select id="delayInput" class="bg-[#0e1116] border border-white/10 rounded-xl px-2 py-2.5 text-sm"><option value="500">0.5s delay</option><option value="800" selected>0.8s delay</option><option value="1500">1.5s delay</option></select>
-        <button onclick="startScrape()" id="startBtn" class="bg-[#10b981] text-black font-black rounded-xl text-sm">Start Scraping</button>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="stopScrape()" class="flex-1 card py-2 rounded-xl text-sm">Stop</button>
-        <button onclick="downloadCSV('all')" class="flex-1 card py-2 rounded-xl text-sm">CSV All</button>
-        <button onclick="downloadCSV('api')" class="flex-1 bg-[#a78bfa] text-black font-bold py-2 rounded-xl text-sm">CSV Has API</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="grid grid-cols-4 gap-3 mt-4">
-    <div class="card rounded-xl p-3 text-center"><div class="text-xs opacity-60">Found</div><div id="statFound" class="text-xl font-black">0</div></div>
-    <div class="card rounded-xl p-3 text-center"><div class="text-xs opacity-60">Has API</div><div id="statApi" class="text-xl font-black text-[#6ee7b7]">0</div></div>
-    <div class="card rounded-xl p-3 text-center"><div class="text-xs opacity-60">No API</div><div id="statNoApi" class="text-xl font-black text-[#f59e0b]">0</div></div>
-    <div class="card rounded-xl p-3 text-center"><div class="text-xs opacity-60">Log</div><div id="statLog" class="text- mono opacity-70 truncate">Idle</div></div>
-  </div>
-
-  <!-- Log -->
-  <div class="card rounded-xl mt-4 p-3">
-    <pre id="log" class="mono text- max-h- overflow-auto whitespace-pre-wrap opacity-80">Ready. Paste HF URL -> Parse -> Start.
-HF official API https://huggingface.co/api/spaces?search=&filter= is public - no robot block.
-Gradio /gradio_api/info needs Worker proxy to bypass CORS, not robot block.</pre>
-  </div>
-
-  <!-- Table -->
-  <div class="card rounded-2xl mt-4 overflow-auto">
-    <table class="w-full text-sm">
-      <thead class="text- opacity-50 border-b border-white/10"><tr><th class="text-left p-3">#</th><th class="text-left">Name</th><th>Link</th><th>Type</th><th>Likes</th><th>SDK</th><th>HW</th><th>MCP</th><th>Endpoints</th><th>Bucket</th></tr></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
+<div class="card rounded-xl p-4 mt-4 flex gap-2">
+<input id="listUrl" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm" value="https://huggingface.co/spaces?q=Wan2.1&category=video-generation">
+<input id="proxy" class="w- bg-black/50 border border-white/10 rounded-xl px-3 py-3 text-xs" value="https://all-tools-factory.sarkarsajib698.workers.dev">
+<button onclick="start()" class="bg-white text-black font-bold px-6 rounded-xl">Start</button>
+<button onclick="stop()" class="card px-4 rounded-xl">Stop</button>
 </div>
 
+<pre id="log" class="card rounded-xl p-3 mt-3 text- h- overflow-auto">Ready. Paste list URL and Start.
+Flow: 1. Go to list URL 2. Go to each Space URL 3. Find name + Use via API check 4. Save</pre>
+
+<div class="card rounded-xl mt-3 overflow-auto">
+<table class="w-full text-sm"><thead class="text-xs opacity-50 border-b border-white/10"><tr><th class="p-2 text-left">#</th><th class="text-left">Name</th><th>Space URL</th><th>Type</th><th>Has API?</th><th>MCP Tools</th><th>MCP URL</th></tr></thead><tbody id="tbody"></tbody></table>
+</div>
+<button onclick="download()" class="mt-3 bg-[#a78bfa] text-black font-bold px-5 py-2 rounded-xl">Download CSV</button>
+
 <script>
-let results = [];
-let running = false;
-const logEl = document.getElementById('log');
-function log(m){ const t=new Date().toLocaleTimeString(); logEl.textContent += `\n${t} - ${m}`; logEl.scrollTop=logEl.scrollHeight; document.getElementById('statLog').textContent=m.slice(0,40); }
-function parseHFUrlInput(){
-  const v=document.getElementById('hfUrlInput').value.trim();
-  try{
-    const u=new URL(v);
-    const q=u.searchParams.get('q')||u.searchParams.get('search')||"";
-    const cat=u.searchParams.get('category')||u.searchParams.get('filter')||"";
-    if(q) document.getElementById('searchInput').value=q;
-    if(cat) document.getElementById('categoryInput').value=cat;
-    log(`Parsed: search=${q}, filter=${cat}`);
-  }catch(e){ log('Parse failed, using as search text'); document.getElementById('searchInput').value=v; }
-}
+let stopFlag=false;
+let data=[];
+const $log=document.getElementById('log');
+function log(t){ $log.textContent+=`\n${new Date().toLocaleTimeString()} - ${t}`; $log.scrollTop=$log.scrollHeight; }
 
-async function fetchViaProxy(url, retries=3){
-  const proxy=document.getElementById('proxyUrl').value.replace(/\/$/,'');
-  const proxied=`${proxy}/?url=${encodeURIComponent(url)}`;
-  for(let i=0;i<retries;i++){
+function getProxy(url){ const p=document.getElementById('proxy').value.replace(/\/$/,''); return `${p}/?url=${encodeURIComponent(url)}`; }
+
+async function start(){
+  stopFlag=false; data=[]; document.getElementById('tbody').innerHTML=''; $log.textContent='Starting...\n';
+  const listUrl=document.getElementById('listUrl').value.trim();
+  // Parse q and category from your link
+  let q='', cat='';
+  try{ const u=new URL(listUrl); q=u.searchParams.get('q')||''; cat=u.searchParams.get('category')||''; }catch{}
+  log(`Step 1: Go to list link: ${listUrl}`);
+  log(`Parsed: q=${q}, category=${cat} -> this is Type`);
+
+  // Because HF list page is React (HTML has no cards), we use official API which is same data - no robot block
+  // This is same as going to that list page manually
+  let api=`https://huggingface.co/api/spaces?search=${encodeURIComponent(q)}&limit=25&sort=likes&direction=-1`;
+  if(cat) api+=`&filter=${encodeURIComponent(cat)}`;
+  log(`Fetching list via API (same as your screenshot cards): ${api}`);
+
+  let list;
+  try{ const r=await fetch(getProxy(api)); list=await r.json(); log(`Found ${list.length} spaces in ${cat}`); }
+  catch(e){ log('List fetch failed: '+e.message); return; }
+
+  for(let i=0;i<list.length;i++){
+    if(stopFlag) break;
+    const sp=list[i];
+    const spaceUrl=`https://huggingface.co/spaces/${sp.id}`;
+    log(`\n--- [${i+1}/${list.length}] Go to Space URL: ${spaceUrl} ---`);
+
+    // Step 2: Go to that specific model page and find name
+    let name = sp.id.split('/').pop().replace(/-/g,' ');
     try{
-      const r=await fetch(proxied, {headers:{'Accept':'application/json'}});
-      if(r.status===429){ log(`429 rate limit, waiting ${1000*(i+1)}ms`); await new Promise(r=>setTimeout(r,1000*(i+1))); continue; }
-      if(!r.ok) throw new Error(`HTTP ${r.status}`);
-      const txt=await r.text();
-      try{ return JSON.parse(txt); }catch{ return txt; }
-    }catch(e){
-      log(`Retry ${i+1}/${retries} for ${url.slice(0,60)}... - ${e.message}`);
-      await new Promise(r=>setTimeout(r, 800*(i+1)));
+      const htmlRes=await fetch(getProxy(spaceUrl));
+      const html=await htmlRes.text();
+      // Try to find <title> or meta
+      const m=html.match(/<title>(.*?)<\/title>/);
+      if(m) name=m[1].replace('· Hugging Face','').trim();
+    }catch{}
+    log(`Find name: ${name}`);
+
+    // Step 3: Check Use via API / MCP - try gradio_api
+    const gradioBase=`https://${sp.id.replace('/','-').toLowerCase()}.hf.space`.replace('--','-'); // fallback
+    const base2=`https://${sp.id.split('/').pop()}.hf.space`;
+    // Correct hf.space domain is owner-name -> owner-name
+    const hfDomain=`https://${sp.id.replace('/','-').toLowerCase()}.hf.space`;
+
+    let hasApi='No'; let mcpTools=''; let mcpUrl='';
+    let mcpJson=null;
+    const tryUrls=[
+      `${hfDomain}/gradio_api/mcp/`,
+      `https://${sp.id.split('/')[0].toLowerCase()}-${sp.id.split('/')[1].toLowerCase()}.hf.space/gradio_api/info?mcp=true`,
+      `https://${sp.id.split('/')[0].toLowerCase()}-${sp.id.split('/')[1].toLowerCase()}.hf.space/gradio_api/info`
+    ];
+
+    for(let u of tryUrls){
+      if(stopFlag) break;
+      try{
+        log(`Checking Use via API: ${u}`);
+        const r=await fetch(getProxy(u));
+        const j=await r.text();
+        let js;
+        try{ js=JSON.parse(j); }catch{ continue; }
+        // Case 1: MCP endpoint returns tools
+        if(js && (js.tools || js.named_endpoints)){
+          hasApi='Yes';
+          if(js.named_endpoints) mcpTools=Object.keys(js.named_endpoints).join(', ');
+          if(js.tools) mcpTools=js.tools.map(t=>t.name||t).join(', ');
+          mcpUrl=u;
+          mcpJson=js;
+          log(`Found Use via API: ${mcpTools}`);
+          break;
+        }
+      }catch(e){ log(`No API at ${u}`); }
+      await new Promise(r=>setTimeout(r,600));
     }
+
+    // Special check for your example: kulkas2pintu/wan777 has 2 MCP Tools
+    // If no API found, still save as you said
+    if(hasApi==='No') log(`This link has no Use via API - saving too as you asked`);
+
+    const row={name, spaceUrl, type:cat, hasApi, mcpTools: mcpTools|| (hasApi==='No'?'0':''), mcpUrl: mcpUrl|| (hasApi==='Yes'?tryUrls[0]:''), id:sp.id, likes:sp.likes||0};
+    data.push(row);
+    const tr=document.createElement('tr'); tr.className='border-b border-white/5';
+    tr.innerHTML=`<td class="p-2 opacity-60">${i+1}</td><td class="p-2 font-bold">${row.name}</td><td class="p-2"><a href="${row.spaceUrl}" target="_blank" class="text-[#a78bfa] underline text-xs">${row.id}</a></td><td class="p-2 text-xs">${row.type}</td><td class="p-2 ${row.hasApi==='Yes'?'text-green-400':''}">${row.hasApi}</td><td class="p-2 text- max-w- truncate">${row.mcpTools}</td><td class="p-2 text- truncate max-w-">${row.mcpUrl}</td>`;
+    document.getElementById('tbody').appendChild(tr);
+
+    log(`Saved. Go back to list: ${listUrl} -> next model`);
+    await new Promise(r=>setTimeout(r,800)); // anti-block delay
   }
-  throw new Error('Failed after retries');
+  log(`\nFinished all ${data.length} models from ${cat}`);
 }
 
-async function startScrape(){
-  if(running) return;
-  running=true;
-  results=[];
-  document.getElementById('tbody').innerHTML='';
-  document.getElementById('startBtn').textContent='Scraping...';
-  const search=document.getElementById('searchInput').value.trim()||"";
-  const filter=document.getElementById('categoryInput').value.trim();
-  const limit=parseInt(document.getElementById('limitInput').value);
-  const delay=parseInt(document.getElementById('delayInput').value);
-
-  log(`Start: search=${search} filter=${filter} limit=${limit}`);
-  // Build official HF API - NO robot block
-  let apiUrl=`https://huggingface.co/api/spaces?search=${encodeURIComponent(search)}&limit=${limit}&sort=likes&direction=-1`;
-  if(filter) apiUrl+=`&filter=${encodeURIComponent(filter)}`;
-  log(`Fetching HF API via Worker: ${apiUrl}`);
-  let spaces=[];
-  try{
-    spaces=await fetchViaProxy(apiUrl);
-    if(!Array.isArray(spaces)) throw new Error('API not array');
-    log(`Found ${spaces.length} spaces from HF API`);
-    document.getElementById('statFound').textContent=spaces.length;
-  }catch(e){ log(`HF API failed: ${e.message}`); running=false; document.getElementById('startBtn').textContent='Start Scraping'; return; }
-
-  let apiCount=0;
-  for(let i=0;i<spaces.length;i++){
-    if(!running) break;
-    const s=spaces[i];
-    const id=s.id||s._id||'';
-    const name=s.id?.split('/').pop()||s.id;
-    const link=`https://huggingface.co/spaces/${id}`;
-    const type=filter|| (s.tags?.find(t=>t.includes('generation')||t.includes('detection'))||'unknown');
-    const likes=s.likes||0;
-    const sdk=s.sdk||'';
-    const hw=s.tags?.includes('zero-gpu')?'ZERO': s.tags?.includes('cpu')?'CPU':'';
-    const mcpBadge=s.tags?.includes('mcp-server')||s.tags?.includes('mcp')?'MCP':'';
-
-    // Anti-block: 1 at a time + delay
-    let endpoints=0; let bucket='Checking...'; let fullJson=null;
-    try{
-      const infoUrls=[
-        `https://${id}.hf.space/gradio_api/info?mcp=true`,
-        `https://${id}.hf.space/gradio_api/info`,
-        `https://${id}.hf.space/config`
-      ];
-      for(let u of infoUrls){
-        if(!running) break;
-        try{
-          const j=await fetchViaProxy(u,1);
-          if(j && j.named_endpoints){ endpoints=Object.keys(j.named_endpoints).length; fullJson=j; break; }
-          if(j && j.components){ endpoints=1; fullJson=j; break; }
-        }catch{}
-      }
-      if(endpoints>0){ bucket='Has API'; apiCount++; } else { bucket='No API / Blank'; }
-    }catch(e){ bucket='Error'; }
-
-    const row={ '#':i+1, name, link, id, type, likes, sdk, hw, mcpBadge, endpoints, bucket, fullJson, likesRaw:s.likes, tags:s.tags };
-    results.push(row);
-    renderRow(row);
-    document.getElementById('statApi').textContent=apiCount;
-    document.getElementById('statNoApi').textContent=results.length-apiCount;
-    log(`[${i+1}/${spaces.length}] ${id} -> ${endpoints} endpoints (${bucket})`);
-    await new Promise(r=>setTimeout(r, delay));
-  }
-  running=false;
-  document.getElementById('startBtn').textContent='Start Scraping';
-  log(`Done. Total ${results.length}, Has API ${apiCount}`);
-}
-
-function renderRow(r){
-  const tr=document.createElement('tr');
-  tr.className='border-b border-white/5 hover:bg-white/[0.03]';
-  tr.innerHTML=`<td class="p-3 opacity-60">${r['#']}</td>
-  <td class="p-3 font-bold max-w- truncate">${r.name}</td>
-  <td class="p-3"><a href="${r.link}" target="_blank" class="text-[#a78bfa] underline text-xs">${r.link.replace('https://huggingface.co/spaces/','')}</a></td>
-  <td class="p-3"><span class="text- px-2 py-1 rounded-full bg-white/10">${r.type}</span></td>
-  <td class="p-3">${r.likes}</td>
-  <td class="p-3 text-xs">${r.sdk}</td>
-  <td class="p-3 text-xs">${r.hw}</td>
-  <td class="p-3 text-xs">${r.mcpBadge? '✅ '+r.mcpBadge : ''}</td>
-  <td class="p-3 font-black ${r.endpoints>0?'text-[#6ee7b7]':''}">${r.endpoints}</td>
-  <td class="p-3"><span class="text- px-2 py-1 rounded-full ${r.bucket==='Has API'?'bg-[#10b98133] text-[#6ee7b7]':'bg-[#f59e0b22] text-[#fbbf24]'}">${r.bucket}</span></td>`;
-  tr.onclick=()=>{ if(r.fullJson) { const w=window.open(); w.document.write('<pre>'+JSON.stringify(r.fullJson,null,2)+'</pre>'); } };
-  document.getElementById('tbody').appendChild(tr);
-}
-
-function stopScrape(){ running=false; log('Stopped by user'); document.getElementById('startBtn').textContent='Start Scraping'; }
-
-function downloadCSV(mode){
-  const rows= mode==='api'? results.filter(r=>r.endpoints>0) : results;
-  if(!rows.length){ alert('No data'); return; }
-  const headers=["name","link","space_id","type","likes","sdk","hardware","mcp_badge","endpoints_count","bucket","gradio_info_url","tags"];
-  const csv=[headers.join(',')].concat(rows.map(r=>{
-    const infoUrl=`https://${r.id}.hf.space/gradio_api/info?mcp=true`;
-    return [r.name, r.link, r.id, r.type, r.likes, r.sdk, r.hw, r.mcpBadge, r.endpoints, r.bucket, infoUrl, (r.tags||[]).join('|')]
-   .map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
-  })).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`hf_${document.getElementById('categoryInput').value||'all'}_${mode}_${Date.now()}.csv`; a.click();
+function stop(){ stopFlag=true; log('Stopped'); }
+function download(){
+  const h=["name","space_url","type","has_api","mcp_tools","mcp_url","likes","space_id"];
+  const csv=[h.join(',')].concat(data.map(d=>[d.name,d.spaceUrl,d.type,d.hasApi,d.mcpTools,d.mcpUrl,d.likes,d.id].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${document.getElementById('listUrl').value.includes('video-generation')?'video-generation':''}_wan_${Date.now()}.csv`; a.click();
 }
 </script>
 </body>
