@@ -1,0 +1,1 @@
+export default { async fetch(req){ const url=new URL(req.url); const t=url.searchParams.get('url'); if(!t) return new Response('?url='); const r=await fetch(t); const b=await r.text(); return new Response(b,{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}}); } }
